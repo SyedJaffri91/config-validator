@@ -1,0 +1,79 @@
+name: Build and Deploy to ECS
+
+# When this pipeline runs: on a push to the main branch
+on:
+  push:
+    branches: [ main ]
+
+# Permissions this workflow needs
+permissions:
+  id-token: write   # required for OIDC — lets the workflow request the AWS token
+  contents: read    # lets the workflow read your repo code
+
+# Values reused across the steps
+env:
+  AWS_REGION: eu-west-2
+  ECR_REPOSITORY: config-validator
+  ECS_CLUSTER: config-validator-cluster
+  ECS_SERVICE: config-validator-service
+  ECS_TASK_FAMILY: config-validator-task
+  CONTAINER_NAME: config-validator
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Get your repo code onto the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Authenticate to AWS using OIDC (no stored keys!)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::276429521380:role/github-actions-config-validator
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 3. Log in to ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 4. Build the image, tag it, and push to ECR
+      - name: Build and push image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # 5. Download the current task definition (and strip read-only fields)
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_FAMILY }} \
+            --query taskDefinition > task-definition.json
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
+            task-definition.json > td-clean.json && mv td-clean.json task-definition.json
+
+      # 6. Insert the new image into the task definition
+      - name: Update task definition with new image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      # 7. Deploy the updated task definition to the service
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
