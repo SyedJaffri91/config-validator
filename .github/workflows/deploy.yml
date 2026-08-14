@@ -24,6 +24,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # TEMPORARY debug step — prints the OIDC token claims
+      - name: Debug OIDC claims
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Workflow ref: ${{ github.workflow_ref }}"
+          echo "Expected sub: repo:${{ github.repository }}:ref:${{ github.ref }}"
+          
       # 1. Get your repo code onto the runner
       - name: Checkout code
         uses: actions/checkout@v4
