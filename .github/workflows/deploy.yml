@@ -29,6 +29,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Security scan — Terraform IaC misconfigurations (fails build on real issues)
+      - name: Trivy IaC scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: ./terraform
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
       # 2. Authenticate to AWS using OIDC (no stored keys!)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

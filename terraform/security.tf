@@ -12,13 +12,6 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  egress {
-    description = "Allow all outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   tags = {
     Name = "config-validator-alb-sg"
@@ -26,6 +19,7 @@ resource "aws_security_group" "alb" {
 }
 
 # Security group for the container — only allows traffic from the load balancer
+#trivy:ignore:AWS-0104 Task needs open egress to reach ECR/CloudWatch; scoping properly requires VPC endpoints (no NAT gateway in this design). Accepted 2026-08-18.
 resource "aws_security_group" "task" {
   name        = "config-validator-task-sg"
   description = "Allow traffic from the load balancer only"
@@ -50,4 +44,16 @@ resource "aws_security_group" "task" {
   tags = {
     Name = "config-validator-task-sg"
   }
+}
+
+
+# ALB egress — scoped to the task SG (separate resource to avoid a dependency cycle)
+resource "aws_security_group_rule" "alb_egress_to_task" {
+  type                     = "egress"
+  from_port                = 8000
+  to_port                  = 8000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.alb.id
+  source_security_group_id = aws_security_group.task.id
+  description              = "Allow outbound only to the task security group"
 }

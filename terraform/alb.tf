@@ -22,12 +22,14 @@ resource "aws_lb_target_group" "main" {
 }
 
 # The load balancer — the public front door
+#trivy:ignore:AWS-0053 Public ALB is intended — config-validator is a public web service reachable by users. Accepted 2026-08-18.
 resource "aws_lb" "main" {
   name               = "config-validator-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  drop_invalid_header_fields = true
 
   tags = {
     Name = "config-validator-alb"
@@ -35,6 +37,7 @@ resource "aws_lb" "main" {
 }
 
 # The listener — receives traffic on port 80 and forwards it to the target group
+#trivy:ignore:AWS-0054 HTTPS deferred for this learning project (no domain/TLS cert). Production would add an ACM cert + HTTPS listener. Accepted 2026-08-18.
 resource "aws_lb_listener" "main" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80

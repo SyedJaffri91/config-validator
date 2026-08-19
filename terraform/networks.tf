@@ -1,4 +1,5 @@
 # The VPC — your private network
+#trivy:ignore:AWS-0178 VPC Flow Logs deferred for this learning project. Would enable in production for network audit/forensics. Accepted 2026-08-18.
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -19,6 +20,7 @@ resource "aws_internet_gateway" "main" {
 }
 
 # Public subnet in availability zone A
+#trivy:ignore:AWS-0164 Public IP required — no NAT gateway in this design, so tasks pull images via public subnets. Deliberate cost/simplicity tradeoff. Accepted 2026-08-18.
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.0.0/20"
@@ -31,6 +33,7 @@ resource "aws_subnet" "public_a" {
 }
 
 # Public subnet in availability zone B
+#trivy:ignore:AWS-0164 Public IP required — no NAT gateway in this design, so tasks pull images via public subnets. Deliberate cost/simplicity tradeoff. Accepted 2026-08-18.
 resource "aws_subnet" "public_b" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.16.0/20"

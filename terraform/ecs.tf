@@ -32,6 +32,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
 }
 
 # The ECS cluster — the "home" where the container runs
+#trivy:ignore:AWS-0034 Container Insights adds cost; not needed for this learning project. Would enable in production for observability. Accepted 2026-08-18.
 resource "aws_ecs_cluster" "main" {
   name = "config-validator-cluster"
 
