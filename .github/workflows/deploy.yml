@@ -29,6 +29,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Security scan — detect hardcoded secrets in the repo
+      - name: Trivy secret scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
       # Security scan — Terraform IaC misconfigurations (fails build on real issues)
       - name: Trivy IaC scan
         uses: aquasecurity/trivy-action@v0.36.0
