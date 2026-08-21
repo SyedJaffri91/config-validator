@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"        # watches your Python requirements
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"  # also keeps your workflow actions updated
+    directory: "/"
+    schedule:
+      interval: "weekly"
